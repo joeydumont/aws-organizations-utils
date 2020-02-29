@@ -1,0 +1,14 @@
+[package]
+name = "aws-organizations-utils"
+version = "0.1.0"
+authors = ["Joey Dumont <joey.dumont@nrc.cnrc.gc.ca>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rusoto_core = "*"
+rusoto_organizations = "*"
+rusoto_credential = "*"
+comfy-table = "*"
+env_logger = "*"
