@@ -224,7 +224,6 @@ pub fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
         ),
     }
 
-
     // When printing the accounts, I print the account's parent OUs' names.
     // To do that, I need to keep of how deep I am in the tree struture, and
     // what the parent OUs are.
@@ -235,7 +234,7 @@ pub fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
     // degree of that OU to the height stack. When we pop any node, we decrement the
     // degree counter in the vec until it reaches 0, then we pop the stack. We pop
     // until there are no non-zero counters.
-    let mut accounts : Vec<(Account, String)> = Vec::new();
+    let mut accounts: Vec<(Account, String)> = Vec::new();
     let mut stack: Vec<&OrgTree> = Vec::new();
     let mut height_stack: Vec<usize> = Vec::new();
     let mut ou_prefix: Vec<String> = Vec::new();
@@ -258,10 +257,10 @@ pub fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
                         stack.push(elem);
                     }
                 }
-            },
+            }
             OrgNode::Account(account) => {
                 accounts.push((account.clone(), build_ou_prefix(&ou_prefix)));
-            },
+            }
         }
 
         while let Some(0) = height_stack.last() {

@@ -17,3 +17,8 @@ subcommands:
             required: true
             long: role-name
             takes_value: true
+        - account-ids:
+            help: (Optional) Comma separated list of accounts to query. If not present, all accounts in the organization will be queried.
+            required: false
+            long: account-ids
+            takes_value: true
