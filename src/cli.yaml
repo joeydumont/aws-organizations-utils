@@ -22,3 +22,10 @@ subcommands:
             required: false
             long: account-ids
             takes_value: true
+args:
+  aws-cli-command:
+    raw: true
+    about: Coommand passed to the AWS CLI.
+    version: "0.1.0"
+    author: Joey Dumont <joey.dumont@gmail.com>
+

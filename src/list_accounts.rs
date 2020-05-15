@@ -3,6 +3,7 @@ use rusoto_organizations::{
     ListRootsRequest, OrganizationalUnit, Organizations, OrganizationsClient, Root,
 };
 use std::{thread, time};
+use async_recursion::async_recursion;
 
 /// In an AWS Organizations, each node of the account tree can either be an OU or an account.
 #[derive(Debug)]
@@ -75,7 +76,8 @@ impl OrgTree {
 ///  * R:A
 ///  * R:OU:A2
 ///  * R:OU:A1
-fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTree) {
+#[async_recursion]
+async fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTree) {
     match &node.root {
         OrgNode::Ou(v) => {
             let list_children_request = ListChildrenRequest {
@@ -87,7 +89,7 @@ fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTr
 
             let list_children_response = client
                 .list_children(list_children_request)
-                .sync()
+                .await
                 .unwrap()
                 .children
                 .unwrap();
@@ -103,7 +105,7 @@ fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTr
 
                     let describe_org_unit_response = client
                         .describe_organizational_unit(describe_org_unit_request)
-                        .sync()
+                        .await
                         .unwrap()
                         .organizational_unit
                         .unwrap();
@@ -127,7 +129,7 @@ fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTr
 
             let list_children_response = client
                 .list_children(list_children_request)
-                .sync()
+                .await
                 .unwrap()
                 .children
                 .unwrap();
@@ -147,7 +149,7 @@ fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTr
 
                     let describe_account_response = client
                         .describe_account(describe_account_request)
-                        .sync()
+                        .await
                         .unwrap()
                         .account
                         .unwrap();
@@ -167,7 +169,7 @@ fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut OrgTr
             match &mut node.children {
                 Some(v) => {
                     for element in v {
-                        recursively_build_account_tree(client, &mut *element);
+                        recursively_build_account_tree(client, &mut *element).await;
                     }
                 }
 
@@ -189,7 +191,7 @@ fn build_ou_prefix(ou_prefix_vec: &Vec<String>) -> String {
 
 /// Fetches all of the accounts in the AWS Organizations and outputs
 /// them in a Markdown-compatible table.
-pub fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
+pub async fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
     let root_request = ListRootsRequest {
         max_results: None,
         next_token: None,
@@ -197,7 +199,7 @@ pub fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
 
     let root: Root = client
         .list_roots(root_request)
-        .sync()
+        .await
         .unwrap()
         .roots
         .unwrap()[0]
@@ -215,7 +217,7 @@ pub fn list_accounts(client: &OrganizationsClient) -> Vec<(Account, String)> {
     // Recursively build the account tree.
     match &org_tree.root {
         OrgNode::Ou(_) => {
-            recursively_build_account_tree(&client, &mut org_tree);
+            recursively_build_account_tree(&client, &mut org_tree).await;
         }
 
         _ => panic!(
