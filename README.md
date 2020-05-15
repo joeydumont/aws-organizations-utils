@@ -63,8 +63,10 @@ Resources:
 To list all the S3 buckets available in the organization, you would need credentials for the `OrganizationWideViewOnly` role, then run
 
 ```bash
-aws-organizations-utils list-resources --role-name OrganizationWideViewOnly [ --account-ids <comma_separated_list_of_accounts ] -- s3api list-buckets
+aws-organizations-utils list-resources --role-name OrganizationWideViewOnly [ --account-ids <comma_separated_list_of_accounts> ] -- s3api list-buckets
 ```
+
+If you don't provide a list of accounts IDs, it will attempt to build the account tree
 
 This prints out the results in JSON format with the schema:
 ```json
