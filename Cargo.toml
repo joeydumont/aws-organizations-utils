@@ -8,14 +8,18 @@ edition = "2018"
 
 [dependencies]
 rusoto_core = "*"
-rusoto_organizations = "*"
+rusoto_budgets = {version = "*", features = ["serialize_structs"]}
 rusoto_credential = "*"
+rusoto_organizations = "*"
 comfy-table = "*"
 env_logger = "*"
 rusoto_sts = "*"
 rusoto_s3 = "*"
-clap  = {version = "*", features = ["yaml", "wrap_help"]}
+clap  = {version = "*", features = ["wrap_help"]}
 tokio = "*"
 async-recursion = "*"
 serde = "*"
 serde_json = "*"
+
+[[bin]]
+name = 'aws-organizations-utils'

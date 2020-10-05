@@ -1,9 +1,9 @@
+use async_recursion::async_recursion;
 use rusoto_organizations::{
     Account, DescribeAccountRequest, DescribeOrganizationalUnitRequest, ListChildrenRequest,
     ListRootsRequest, OrganizationalUnit, Organizations, OrganizationsClient, Root,
 };
 use std::{thread, time};
-use async_recursion::async_recursion;
 
 /// In an AWS Organizations, each node of the account tree can either be an OU or an account.
 #[derive(Debug)]
@@ -16,40 +16,40 @@ enum OrgNode {
 #[derive(Debug)]
 struct OrgTree {
     root: OrgNode,
-    children: Option<Vec<Box<OrgTree>>>,
+    children: Option<Vec<OrgTree>>,
 }
 
 impl OrgTree {
     pub fn new(root: OrgNode) -> OrgTree {
         OrgTree {
-            root: root,
+            root,
             children: None,
         }
     }
 
-    /// Visits OUs in a preorder fashiong, listing all accounts at each level.
-    pub fn iterative_preorder_ou(&self) -> Vec<&OrgTree> {
-        let mut stack: Vec<&OrgTree> = Vec::new();
-        let mut res: Vec<&OrgTree> = Vec::new();
+    // Visits OUs in a preorder fashiong, listing all accounts at each level.
+    // pub fn iterative_preorder_ou(&self) -> Vec<&OrgTree> {
+    //     let mut stack: Vec<&OrgTree> = Vec::new();
+    //     let mut res: Vec<&OrgTree> = Vec::new();
 
-        stack.push(self);
-        while !stack.is_empty() {
-            let node = stack.pop().unwrap();
-            res.push(node);
+    //     stack.push(self);
+    //     while !stack.is_empty() {
+    //         let node = stack.pop().unwrap();
+    //         res.push(node);
 
-            if let Some(ref children) = node.children {
-                for elem in children {
-                    stack.push(elem);
-                }
-            }
+    //         if let Some(ref children) = node.children {
+    //             for elem in children {
+    //                 stack.push(elem);
+    //             }
+    //         }
 
-            println!("Stack:");
-            for elem in stack.iter() {
-                println!("{:#?}", elem.root);
-            }
-        }
-        res
-    }
+    //         println!("Stack:");
+    //         for elem in stack.iter() {
+    //             println!("{:#?}", elem.root);
+    //         }
+    //     }
+    //     res
+    // }
 }
 
 /// Starting from a root of the AWS Organization, we first request all of its child OUs, and then
@@ -94,7 +94,7 @@ async fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut
                 .children
                 .unwrap();
 
-            if list_children_response.len() > 0 {
+            if !list_children_response.is_empty() {
                 node.children = Some(Vec::new());
 
                 for element in list_children_response.iter() {
@@ -110,11 +110,9 @@ async fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut
                         .organizational_unit
                         .unwrap();
                     if let Some(v) = &mut node.children {
-                        v.push(Box::new(OrgTree::new(OrgNode::Ou(
-                            describe_org_unit_response,
-                        ))));
+                        v.push(OrgTree::new(OrgNode::Ou(describe_org_unit_response)));
 
-                        thread::sleep(time::Duration::from_millis(200));
+                        thread::sleep(time::Duration::from_millis(400));
                     }
                 }
             }
@@ -134,7 +132,7 @@ async fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut
                 .children
                 .unwrap();
 
-            if list_children_response.len() > 0 {
+            if !list_children_response.is_empty() {
                 match &mut node.children {
                     Some(_) => (),
                     None => {
@@ -157,9 +155,7 @@ async fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut
                     node.children
                         .as_mut()
                         .unwrap()
-                        .push(Box::new(OrgTree::new(OrgNode::Account(
-                            describe_account_response,
-                        ))));
+                        .push(OrgTree::new(OrgNode::Account(describe_account_response)));
 
                     thread::sleep(time::Duration::from_millis(200));
                 }
@@ -181,7 +177,7 @@ async fn recursively_build_account_tree(client: &OrganizationsClient, node: &mut
     }
 }
 
-fn build_ou_prefix(ou_prefix_vec: &Vec<String>) -> String {
+fn build_ou_prefix(ou_prefix_vec: &[String]) -> String {
     if ou_prefix_vec.len() > 1 {
         ou_prefix_vec[1..].join(":")
     } else {

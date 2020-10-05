@@ -1,10 +1,7 @@
-use clap::{load_yaml, App, Arg, SubCommand};
+use clap::{App, Arg, SubCommand};
 use comfy_table::{Attribute, Cell, Row, Table};
-use env_logger;
-use rusoto_core;
 use rusoto_organizations::OrganizationsClient;
 use rusoto_sts::StsClient;
-use tokio;
 
 mod aws_cli_wrapper;
 mod list_accounts;
@@ -24,6 +21,24 @@ async fn main() {
             SubCommand::with_name("list-accounts").about("List all accounts in the organization"),
         )
         .subcommand(
+            SubCommand::with_name("list-budgets").about("List all budgets in the organization")
+            .arg(Arg::with_name("role-name")
+                .help("Name of the role to assume in each account.")
+                .required(true)
+                .takes_value(true)
+                .long("role-name"))
+            .arg(Arg::with_name("account_ids")
+                .help("(Optional) Comma separated list of accounts to query. If not present, all accounts in the organization will be queried.")
+                .required(false)
+                .takes_value(true)
+                .long("account-ids"))
+            .arg(Arg::with_name("exclude-ous")
+                .help("(Optional) Comma separated list of OUs to exclude.")
+                .required(false)
+                .takes_value(true)
+                .long("exclude-ous"))
+            )
+        .subcommand(
             SubCommand::with_name("list-resources").about("List resources accross the organization.")
             .arg(Arg::with_name("role-name")
                 .help("Name of the role to assume in each account.")
@@ -31,7 +46,7 @@ async fn main() {
                 .takes_value(true)
                 .long("role-name"))
             .arg(Arg::with_name("account-ids")
-                .help("(Optional) Comma separated list of accounts to query. If not present, all accounts in the organizatino will be queried.")
+                .help("(Optional) Comma separated list of accounts to query. If not present, all accounts in the organization will be queried.")
                 .required(false)
                 .long("account-ids")
                 .takes_value(true))
@@ -68,6 +83,36 @@ async fn main() {
             println!("{}", table);
         }
 
+        ("list-budgets", Some(subcmd)) => {
+            // Get a list of budgets.
+            let sts = StsClient::new(rusoto_core::Region::UsEast1);
+            let role_name = subcmd.value_of("role-name").unwrap();
+            let mut account_ids: Vec<String> = Vec::new();
+
+            if let Some(account_ids_input) = subcmd.value_of("account-ids") {
+                for account in account_ids_input.split(',') {
+                    account_ids.push(account.to_string());
+                }
+            } else {
+                let client = OrganizationsClient::new(rusoto_core::Region::UsEast1);
+                let temp_account_ids = list_accounts::list_accounts(&client).await;
+
+                let mut excluded_ous = Vec::new();
+                if let Some(excluded_ous_input) = subcmd.value_of("exclude-ous") {
+                    for ou in excluded_ous_input.split(',') {
+                        excluded_ous.push(ou.to_string());
+                    }
+                }
+                for (account, ou) in temp_account_ids {
+                    if !excluded_ous.contains(&ou) {
+                        account_ids.push(account.id.unwrap());
+                    }
+                }
+            }
+
+            aws_cli_wrapper::list_budgets(&sts, role_name, account_ids).await;
+        }
+
         ("list-resources", Some(subcmd)) => {
             let sts = StsClient::new(rusoto_core::Region::UsEast1);
             let role_name = subcmd.value_of("role-name").unwrap();
@@ -78,7 +123,7 @@ async fn main() {
                 .join(" ");
             let mut account_ids: Vec<String> = Vec::new();
             if let Some(account_ids_input) = subcmd.value_of("account-ids") {
-                for account in account_ids_input.split(",") {
+                for account in account_ids_input.split(',') {
                     account_ids.push(account.to_string());
                 }
             } else {
@@ -89,7 +134,7 @@ async fn main() {
 
                 let mut excluded_ous = Vec::new();
                 if let Some(excluded_ous_input) = subcmd.value_of("exclude-ous") {
-                    for ou in excluded_ous_input.split(",") {
+                    for ou in excluded_ous_input.split(',') {
                         excluded_ous.push(ou.to_string());
                     }
                 }
@@ -106,5 +151,4 @@ async fn main() {
 
         _ => (),
     }
-
 }
