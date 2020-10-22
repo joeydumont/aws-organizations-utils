@@ -2,7 +2,6 @@ use rusoto_budgets::{Budgets, BudgetsClient, DescribeBudgetsRequest, DescribeBud
 use rusoto_credential::ProvideAwsCredentials;
 use rusoto_sts::{self, StsAssumeRoleSessionCredentialsProvider, StsClient};
 use serde::{Deserialize, Serialize};
-use std::io::{self, Write};
 use std::process::Command;
 
 #[derive(Serialize, Deserialize)]
@@ -100,10 +99,6 @@ pub async fn list_resources(
             .args(command_string.split(' '))
             .output()
             .expect("failed to execute process");
-
-        // Error handling.
-        //io::stdout().write_all(&output.stdout).unwrap();
-        //io::stderr().write_all(&output.stderr).unwrap();
 
         // Add to our base JSON.
         resources.push(Resources {
